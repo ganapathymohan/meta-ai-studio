@@ -304,20 +304,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onPermissionRequest(request: PermissionRequest) {
-            // Camera / Microphone – request from Android at runtime first
             val androidPerms = mutableListOf<String>()
             request.resources.forEach { res ->
                 when (res) {
-                    PermissionRequest.RESOURCE_VIDEO_CAPTURE ->
-                        androidPerms.add(Manifest.permission.CAMERA)
-                    PermissionRequest.RESOURCE_AUDIO_CAPTURE ->
-                        androidPerms.add(Manifest.permission.RECORD_AUDIO)
+                    PermissionRequest.RESOURCE_VIDEO_CAPTURE -> androidPerms.add(Manifest.permission.CAMERA)
+                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> androidPerms.add(Manifest.permission.RECORD_AUDIO)
                 }
             }
 
             val notGranted = androidPerms.filter {
-                ContextCompat.checkSelfPermission(this@MainActivity, it) !=
-                    PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(this@MainActivity, it) != PackageManager.PERMISSION_GRANTED
             }
 
             if (notGranted.isEmpty()) {
@@ -328,8 +324,8 @@ class MainActivity : AppCompatActivity() {
                     notGranted.toTypedArray(),
                     CAMERA_PERMISSION_CODE
                 )
-                // Grant after user approves (best-effort; user must retry on the site)
-                request.grant(request.resources)
+                // Decline for now. The user will need to tap the button again after granting system permissions.
+                request.deny()
             }
         }
 
@@ -338,28 +334,18 @@ class MainActivity : AppCompatActivity() {
             filePathCallback: ValueCallback<Array<Uri>>,
             fileChooserParams: FileChooserParams
         ): Boolean {
-            // Cancel any previous pending callback
+            // Cancel any existing callback
             fileUploadCallback?.onReceiveValue(null)
             fileUploadCallback = filePathCallback
 
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                // Accept images and videos for Meta AI
-                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*", "*/*"))
-            }
-
             return try {
-                startActivityForResult(
-                    Intent.createChooser(intent, "Choose File"),
-                    FILE_CHOOSER_CODE
-                )
+                val intent = fileChooserParams.createIntent()
+                startActivityForResult(intent, FILE_CHOOSER_CODE)
                 true
             } catch (e: ActivityNotFoundException) {
+                fileUploadCallback?.onReceiveValue(null)
                 fileUploadCallback = null
-                Toast.makeText(this@MainActivity,
-                    "File manager not available", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "No file picker available", Toast.LENGTH_SHORT).show()
                 false
             }
         }
