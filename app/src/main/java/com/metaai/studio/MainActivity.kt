@@ -43,11 +43,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noInternetView: LinearLayout
     private lateinit var retryButton: Button
     
-    private lateinit var searchContainer: LinearLayout
-    private lateinit var searchEditText: EditText
-    private lateinit var closeSearchButton: Button
-    private lateinit var searchFab: Button
-
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
 
     // Pending download while waiting for permission
@@ -146,42 +141,7 @@ class MainActivity : AppCompatActivity() {
         noInternetView = findViewById(R.id.noInternetView)
         retryButton    = findViewById(R.id.retryButton)
         
-        searchContainer   = findViewById(R.id.searchContainer)
-        searchEditText    = findViewById(R.id.searchEditText)
-        closeSearchButton = findViewById(R.id.closeSearchButton)
-        searchFab         = findViewById(R.id.searchFab)
-
         retryButton.setOnClickListener { loadInitialPage() }
-        
-        searchFab.setOnClickListener {
-            searchContainer.visibility = View.VISIBLE
-            searchEditText.requestFocus()
-            showKeyboard()
-        }
-
-        closeSearchButton.setOnClickListener {
-            searchContainer.visibility = View.GONE
-            webView.clearMatches()
-            hideKeyboard()
-        }
-
-        searchEditText.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                webView.findAllAsync(searchEditText.text.toString())
-                hideKeyboard()
-                true
-            } else false
-        }
-    }
-
-    private fun showKeyboard() {
-        val imm = getSystemService(InputMethodManager::class.java)
-        imm?.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT)
-    }
-
-    private fun hideKeyboard() {
-        val imm = getSystemService(InputMethodManager::class.java)
-        imm?.hideSoftInputFromWindow(searchEditText.windowToken, 0)
     }
 
     private fun setupFullscreen() {
@@ -217,9 +177,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Fix 1: Limit refresh to top of screen only
-        webView.viewTreeObserver.addOnScrollChangedListener {
-            swipeRefresh.isEnabled = webView.scrollY == 0
+        // Fix 1: Ensure refresh only works at the top
+        swipeRefresh.setOnChildScrollUpCallback { _, _ ->
+            webView.canScrollVertically(-1)
         }
     }
 
@@ -321,6 +281,9 @@ class MainActivity : AppCompatActivity() {
             progressBar.visibility = View.GONE
             swipeRefresh.isRefreshing = false
             CookieManager.getInstance().flush()
+            
+            // Inject Video Detection Script
+            injectVideoDownloader()
         }
 
         override fun onReceivedError(
@@ -528,9 +491,17 @@ class MainActivity : AppCompatActivity() {
             val file = File(dir, fileName)
             FileOutputStream(file).use { it.write(bytes) }
             
-            // Notify system about the new file
-            DownloadManager.Request(Uri.fromFile(file))
-            Toast.makeText(this, "Saved to Downloads/MetaAI: $fileName", Toast.LENGTH_LONG).show()
+            // Scan file to make it visible in Download manager and Gallery
+            android.media.MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), arrayOf(mimeType)) { path, uri ->
+                runOnUiThread {
+                    Toast.makeText(this, "File saved to Downloads/MetaAI", Toast.LENGTH_SHORT).show()
+                }
+            }
+            
+            // Add to DownloadManager database for visibility
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            dm.addCompletedDownload(fileName, "Meta AI Download", true, mimeType, file.absolutePath, bytes.size.toLong(), true)
+            
         } catch (e: Exception) {
             Toast.makeText(this, "Saving failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
@@ -657,6 +628,55 @@ class MainActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────────
     // UI state helpers
     // ─────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────
+    // Video Downloader Injection
+    // ─────────────────────────────────────────────────────────
+
+    private fun injectVideoDownloader() {
+        val js = """
+            (function() {
+                function addDownloadButtons() {
+                    var videos = document.querySelectorAll('video');
+                    videos.forEach(function(video) {
+                        if (video.getAttribute('data-dm-added')) return;
+                        video.setAttribute('data-dm-added', 'true');
+                        
+                        var container = video.parentElement;
+                        if (!container) return;
+
+                        var btn = document.createElement('div');
+                        btn.innerText = '⬇️ Download Video';
+                        btn.style.cssText = 'position:absolute; z-index:999999; background:#0084ff; color:white; ' +
+                                           'padding:10px 16px; border-radius:30px; cursor:pointer; font-size:14px; ' +
+                                           'font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.5); top:20px; right:20px; ' +
+                                           'display:block !important; visibility:visible !important; opacity:1 !important;';
+                        
+                        // Ensure button is visible relative to video container
+                        var originalPos = window.getComputedStyle(container).position;
+                        if (originalPos === 'static') container.style.position = 'relative';
+                        
+                        container.appendChild(btn);
+                        
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            var url = video.src || video.currentSrc || (video.querySelector('source') ? video.querySelector('source').src : null);
+                            if (url && url.startsWith('http')) {
+                                window.location.href = url;
+                            } else {
+                                alert('Checking for high-quality stream... please wait.');
+                                // Attempt to find video URL in common Meta structures if simple src fails
+                                if (video.currentSrc) window.location.href = video.currentSrc;
+                            }
+                        }, true);
+                    });
+                }
+                setInterval(addDownloadButtons, 2000);
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
 
     private fun showWebView() {
         noInternetView.visibility = View.GONE

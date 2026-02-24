@@ -20,43 +20,6 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- ── Search Bar Container ── -->
-    <LinearLayout
-        android:id="@+id/searchContainer"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_gravity="top"
-        android:background="#DD000000"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:visibility="gone"
-        android:elevation="8dp">
-
-        <EditText
-            android:id="@+id/searchEditText"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:hint="Search videos/text..."
-            android:textColor="#FFFFFF"
-            android:textColorHint="#99FFFFFF"
-            android:background="@null"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:singleLine="true" />
-
-        <Button
-            android:id="@+id/closeSearchButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="✕"
-            android:textColor="#FFFFFF"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            style="?android:attr/borderlessButtonStyle" />
-    </LinearLayout>
-
     <!-- ── Top Progress Bar ── -->
     <ProgressBar
         android:id="@+id/progressBar"
@@ -120,18 +83,5 @@
             style="@style/Widget.MaterialComponents.Button" />
 
     </LinearLayout>
-
-    <Button
-        android:id="@+id/searchFab"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="24dp"
-        android:text="🔍"
-        android:textSize="20sp"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="@color/accent_blue"
-        android:elevation="6dp"
-        style="@style/Widget.MaterialComponents.Button" />
 
 </FrameLayout>
