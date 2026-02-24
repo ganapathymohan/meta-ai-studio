@@ -44,14 +44,25 @@ jobs:
 
       # 5. Bootstrap Gradle wrapper JAR (AFTER cache so cache can't override it)
       - name: Bootstrap Gradle Wrapper JAR and make executable
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           curl -fsSL \
             -H "Accept: application/vnd.github.raw" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/gradle/gradle/contents/gradle/wrapper/gradle-wrapper.jar?ref=v8.4.0" \
             -o gradle/wrapper/gradle-wrapper.jar
-          printf "JAR first 4 bytes: "; xxd -l 4 gradle/wrapper/gradle-wrapper.jar
           echo "JAR size: $(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes"
+          printf "JAR magic bytes: "; xxd -l 4 gradle/wrapper/gradle-wrapper.jar
+          # Abort if not a real ZIP/JAR (PK magic = 50 4B 03 04)
+          MAGIC=$(xxd -l 2 -p gradle/wrapper/gradle-wrapper.jar)
+          if [ "$MAGIC" != "504b" ]; then
+            echo "ERROR: gradle-wrapper.jar is not a valid JAR (got hex: $MAGIC)"
+            cat gradle/wrapper/gradle-wrapper.jar
+            exit 1
+          fi
           chmod +x gradlew
+          echo "✅ gradle-wrapper.jar is valid and gradlew is executable"
 
       # 6. Build Debug APK
       - name: Build Debug APK
