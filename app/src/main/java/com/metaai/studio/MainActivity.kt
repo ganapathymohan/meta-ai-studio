@@ -8,34 +8,23 @@ import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.os.Environment
-import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
-import android.webkit.*
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.FrameLayout
 import java.io.File
+import java.io.FileOutputStream
+import android.util.Base64
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
-    private lateinit var progressBar: ProgressBar
-    private lateinit var noInternetView: LinearLayout
-    private lateinit var retryButton: Button
+    private lateinit var searchContainer: LinearLayout
+    private lateinit var searchEditText: EditText
+    private lateinit var closeSearchButton: Button
+    private lateinit var searchFab: Button
 
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
 
@@ -114,8 +103,43 @@ class MainActivity : AppCompatActivity() {
         progressBar    = findViewById(R.id.progressBar)
         noInternetView = findViewById(R.id.noInternetView)
         retryButton    = findViewById(R.id.retryButton)
+        
+        searchContainer   = findViewById(R.id.searchContainer)
+        searchEditText    = findViewById(R.id.searchEditText)
+        closeSearchButton = findViewById(R.id.closeSearchButton)
+        searchFab         = findViewById(R.id.searchFab)
 
         retryButton.setOnClickListener { loadInitialPage() }
+        
+        searchFab.setOnClickListener {
+            searchContainer.visibility = View.VISIBLE
+            searchEditText.requestFocus()
+            showKeyboard()
+        }
+
+        closeSearchButton.setOnClickListener {
+            searchContainer.visibility = View.GONE
+            webView.clearMatches()
+            hideKeyboard()
+        }
+
+        searchEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                webView.findAllAsync(searchEditText.text.toString())
+                hideKeyboard()
+                true
+            } else false
+        }
+    }
+
+    private fun showKeyboard() {
+        val imm = getSystemService(InputMethodManager::class.java)
+        imm?.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(searchEditText.windowToken, 0)
     }
 
     private fun setupFullscreen() {
@@ -149,6 +173,11 @@ class MainActivity : AppCompatActivity() {
                 swipeRefresh.isRefreshing = false
                 showNoInternet()
             }
+        }
+
+        // Fix 1: Limit refresh to top of screen only
+        webView.viewTreeObserver.addOnScrollChangedListener {
+            swipeRefresh.isEnabled = webView.scrollY == 0
         }
     }
 
@@ -198,6 +227,26 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient   = MetaWebViewClient()
         webView.webChromeClient = MetaWebChromeClient()
+        
+        // Fix 3: Enable JavaScript Interface for Blob downloads
+        webView.addJavascriptInterface(BlobDownloader(), "BlobDownloader")
+
+        // Long-click for Video Download (Fix 3 continued)
+        webView.setOnLongClickListener {
+            val result = webView.hitTestResult
+            if (result.type == WebView.HitTestResult.VIDEO_TYPE || result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) {
+                val url = result.extra
+                if (url != null && (url.contains(".mp4") || url.contains(".mkv") || url.contains(".webm"))) {
+                    AlertDialog.Builder(this)
+                        .setTitle("Download Video")
+                        .setMessage("Do you want to download this video?")
+                        .setPositiveButton("Download") { _, _ -> handleDownload(url, "", "video/mp4") }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    true
+                } else false
+            } else false
+        }
 
         // Download listener
         webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
@@ -383,6 +432,23 @@ class MainActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────────
 
     private fun handleDownload(url: String, contentDisposition: String, mimeType: String) {
+        // Fix 2: Handle blob: and data: URLs
+        if (url.startsWith("blob:")) {
+            webView.loadUrl(BlobDownloader.getBlobAsBase64Js(url))
+            return
+        }
+
+        if (url.startsWith("data:")) {
+            handleDataUri(url)
+            return
+        }
+
+        // Standard HTTP/HTTPS
+        if (!url.startsWith("http")) {
+            Toast.makeText(this, "Cannot download: Invalid URL type", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         // On Android < Q we need WRITE_EXTERNAL_STORAGE
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(
@@ -400,6 +466,32 @@ class MainActivity : AppCompatActivity() {
             return
         }
         startDownload(url, contentDisposition, mimeType)
+    }
+
+    private fun handleDataUri(dataUri: String) {
+        try {
+            val base64Data = dataUri.substringAfter(",")
+            val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+            val fileName = "MetaAI_Export_${System.currentTimeMillis()}.png"
+            saveBytesToFile(bytes, fileName, "image/png")
+        } catch (e: Exception) {
+            Toast.makeText(this, "Data URL download failed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun saveBytesToFile(bytes: ByteArray, fileName: String, mimeType: String) {
+        try {
+            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "MetaAI")
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, fileName)
+            FileOutputStream(file).use { it.write(bytes) }
+            
+            // Notify system about the new file
+            DownloadManager.Request(Uri.fromFile(file))
+            Toast.makeText(this, "Saved to Downloads/MetaAI: $fileName", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Saving failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startDownload(url: String, contentDisposition: String, mimeType: String) {
@@ -500,6 +592,44 @@ class MainActivity : AppCompatActivity() {
                         "Camera/mic ready. Please retry on the page.",
                         Toast.LENGTH_SHORT).show()
                 }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // JavaScript Interface for Blob Handling
+    // ─────────────────────────────────────────────────────────
+
+    inner class BlobDownloader {
+        @JavascriptInterface
+        fun onBlobDataReceived(base64: String, mimeType: String) {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "bin"
+            val fileName = "MetaAI_Blob_${System.currentTimeMillis()}.$ext"
+            runOnUiThread {
+                saveBytesToFile(bytes, fileName, mimeType)
+            }
+        }
+
+        companion object {
+            fun getBlobAsBase64Js(url: String): String {
+                return "javascript:(function() {" +
+                        "  var xhr = new XMLHttpRequest();" +
+                        "  xhr.open('GET', '$url', true);" +
+                        "  xhr.responseType = 'blob';" +
+                        "  xhr.onload = function() {" +
+                        "    if (this.status == 200) {" +
+                        "      var blob = this.response;" +
+                        "      var reader = new FileReader();" +
+                        "      reader.readAsDataURL(blob);" +
+                        "      reader.onloadend = function() {" +
+                        "        var base64data = reader.result.split(',')[1];" +
+                        "        BlobDownloader.onBlobDataReceived(base64data, blob.type);" +
+                        "      };" +
+                        "    }" +
+                        "  };" +
+                        "  xhr.send();" +
+                        "})();"
             }
         }
     }
