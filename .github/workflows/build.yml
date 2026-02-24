@@ -64,7 +64,18 @@ jobs:
           chmod +x gradlew
           echo "✅ gradle-wrapper.jar is valid and gradlew is executable"
 
-      # 6. Build Debug APK
+      # 6. Verify wrapper state before build
+      - name: Verify Gradle wrapper before build
+        run: |
+          echo "=== gradlew first line ==="
+          head -1 gradlew | xxd
+          echo "=== gradle-wrapper.jar ==="
+          ls -la gradle/wrapper/gradle-wrapper.jar
+          xxd -l 4 gradle/wrapper/gradle-wrapper.jar
+          echo "=== java -jar test ==="
+          java -jar gradle/wrapper/gradle-wrapper.jar --version 2>&1 | head -3 || true
+
+      # 7. Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
