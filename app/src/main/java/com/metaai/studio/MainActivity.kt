@@ -53,10 +53,12 @@ class MainActivity : AppCompatActivity() {
         private val ALLOWED_HOSTS = listOf(
             "meta.ai", "www.meta.ai",
             "facebook.com", "www.facebook.com", "m.facebook.com",
-            "login.facebook.com",
-            "fbcdn.net",
-            "accounts.google.com",
-            "graph.facebook.com"
+            "login.facebook.com", "graph.facebook.com",
+            "meta.com", "account.meta.com", "auth.meta.com", "www.meta.com",
+            "messenger.com", "www.messenger.com",
+            "instagram.com", "www.instagram.com",
+            "fbcdn.net", "fbsbx.com",
+            "accounts.google.com"
         )
 
         private val MOBILE_UA =
@@ -247,29 +249,35 @@ class MainActivity : AppCompatActivity() {
         ): Boolean {
             val url  = request.url?.toString() ?: return false
             val host = request.url?.host      ?: return false
+            val path = request.url?.path      ?: ""
 
-            // Block non-HTTPS (except intent:// deep links for login flows)
-            if (url.startsWith("intent://")) {
+            // Handle special intent:// and deep link schemes
+            if (url.startsWith("intent://") || url.startsWith("fb-messenger://") || url.startsWith("fb://")) {
                 return try {
                     val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
-                    startActivity(intent)
+                    if (packageManager.resolveActivity(intent, 0) != null) {
+                        startActivity(intent)
+                    }
                     true
                 } catch (e: Exception) { true }
             }
 
+            // Always allow standard web protocols
             if (!url.startsWith("https://") && !url.startsWith("http://")) return true
 
-            // Allow whitelisted hosts (meta.ai + facebook.com for login)
-            val allowed = ALLOWED_HOSTS.any { host.endsWith(it) }
-            return if (allowed) {
-                false // Let WebView handle it
+            // Logic to keep login and app functionality INSIDE the WebView
+            val isWhitelisted = ALLOWED_HOSTS.any { host.endsWith(it, ignoreCase = true) }
+            val isLoginFlow = url.contains("login") || url.contains("auth") || url.contains("oauth") || url.contains("account")
+
+            return if (isWhitelisted || isLoginFlow) {
+                false // Keep inside the app
             } else {
-                // Open external URLs in device browser
+                // Truly external URLs (like privacy policy links to other sites) open in external browser
                 try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
                 } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(this@MainActivity,
-                        "No browser app found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "No browser found", Toast.LENGTH_SHORT).show()
                 }
                 true
             }

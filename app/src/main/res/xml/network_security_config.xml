@@ -6,6 +6,8 @@
         <domain includeSubdomains="true">facebook.com</domain>
         <domain includeSubdomains="true">fbcdn.net</domain>
         <domain includeSubdomains="true">cdninstagram.com</domain>
+        <domain includeSubdomains="true">meta.com</domain>
+        <domain includeSubdomains="true">messenger.com</domain>
     </domain-config>
     <!-- Block all cleartext traffic by default -->
     <base-config cleartextTrafficPermitted="false">
