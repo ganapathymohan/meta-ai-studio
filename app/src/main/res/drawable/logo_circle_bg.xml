@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Circular background for the logo shown on the splash screen -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:gradientRadius="200%"
+        android:startColor="#3030AA"
+        android:endColor="#0A1A3E" />
+    <stroke
+        android:width="2dp"
+        android:color="#4444EE" />
+</shape>

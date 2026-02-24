@@ -1,0 +1,42 @@
+# Built outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystore files (NEVER commit these!)
+*.jks
+*.keystore
+release.jks
+
+# Log files
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# Kotlin
+.kotlin/
+
+# Gradle wrapper JAR — force-included so GitHub Actions can run ./gradlew
+!gradle/wrapper/gradle-wrapper.jar

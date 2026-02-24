@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Backgrounds -->
+    <color name="background">#0D0D1A</color>
+    <color name="surface">#16162A</color>
+    <color name="surface_variant">#1E1E35</color>
+
+    <!-- Accents -->
+    <color name="accent_blue">#4361EE</color>
+    <color name="accent_purple">#7B2FBE</color>
+    <color name="accent_cyan">#4CC9F0</color>
+    <color name="accent_pink">#F72585</color>
+
+    <!-- Text -->
+    <color name="text_primary">#F0F0FF</color>
+    <color name="text_secondary">#8888AA</color>
+
+    <!-- Splash gradient stops -->
+    <color name="splash_start">#0D0D1A</color>
+    <color name="splash_mid">#1A0A3E</color>
+    <color name="splash_end">#0A1A3E</color>
+
+    <!-- Icon background gradient stops -->
+    <color name="icon_start">#2A0080</color>
+    <color name="icon_end">#004080</color>
+
+    <!-- Status bar -->
+    <color name="colorPrimaryDark">#0D0D1A</color>
+</resources>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/splash_gradient"
+    android:padding="32dp">
+
+    <!-- AI Icon -->
+    <ImageView
+        android:id="@+id/splashLogo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@drawable/ic_launcher_foreground"
+        android:background="@drawable/logo_circle_bg"
+        android:padding="16dp"
+        android:contentDescription="Meta AI Studio Logo"
+        android:elevation="8dp" />
+
+    <!-- App Name -->
+    <TextView
+        android:id="@+id/splashTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:text="Meta AI Studio"
+        android:textColor="#FFFFFF"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:fontFamily="sans-serif-medium" />
+
+    <!-- Tagline -->
+    <TextView
+        android:id="@+id/splashSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Create · Explore · Download"
+        android:textColor="#9999DD"
+        android:textSize="15sp"
+        android:letterSpacing="0.12"
+        android:fontFamily="sans-serif-light" />
+
+    <!-- Loading Spinner -->
+    <ProgressBar
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="60dp"
+        android:indeterminateTint="#6677FF" />
+
+    <!-- Version -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="v1.0.0"
+        android:textColor="#55558888"
+        android:textSize="12sp" />
+
+</LinearLayout>

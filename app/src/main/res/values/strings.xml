@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meta AI Studio</string>
+    <string name="exit_title">Exit Meta AI Studio</string>
+    <string name="exit_message">Are you sure you want to exit?</string>
+    <string name="btn_exit">Exit</string>
+    <string name="btn_stay">Stay</string>
+    <string name="btn_retry">Retry</string>
+    <string name="no_internet">No Internet Connection</string>
+    <string name="no_internet_sub">Please check your connection and try again.</string>
+    <string name="download_started">Downloading file…</string>
+    <string name="download_complete">Download complete! Saved to Downloads/MetaAI</string>
+    <string name="permission_denied">Permission denied. Cannot download files.</string>
+    <string name="no_browser">No browser found to open this link.</string>
+    <string name="tagline">Create · Explore · Download</string>
+</resources>

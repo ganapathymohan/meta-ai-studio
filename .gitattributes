@@ -1,0 +1,21 @@
+# Treat Gradle wrapper JAR as binary — prevents CRLF corruption on Windows
+gradle/wrapper/gradle-wrapper.jar binary
+
+# Shell scripts — always LF
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows batch — always CRLF
+gradlew.bat text eol=crlf
+*.bat text eol=crlf
+
+# Source files — normalise to LF
+*.kt text eol=lf
+*.java text eol=lf
+*.xml text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.pro text eol=lf
