@@ -20,16 +20,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Bootstrap Gradle wrapper JAR (official binary from Gradle GitHub release)
+      # 2. Bootstrap Gradle wrapper JAR via GitHub API (base64 decoded binary)
       - name: Bootstrap Gradle Wrapper JAR
         run: |
-          curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
-            "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
-          # Verify it's a real JAR (ZIP magic bytes PK)
-          file gradle/wrapper/gradle-wrapper.jar
+          curl -fsSL \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/gradle/gradle/contents/gradle/wrapper/gradle-wrapper.jar?ref=v8.4.0" \
+            -o gradle/wrapper/gradle-wrapper.jar
+          # Verify it's a real ZIP/JAR (magic bytes PK = 50 4B)
+          hexdump -C gradle/wrapper/gradle-wrapper.jar | head -1
           echo "Wrapper JAR size: $(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes"
 
-      # 3. Set up JDK 17
+      # 3. Fix CRLF on gradlew (committed from Windows), then make executable
+      - name: Fix gradlew and make executable
+        run: |
+          sed -i 's/\r//' gradlew
+          chmod +x gradlew
+
+      # 4. Set up JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -48,14 +56,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 5. Fix line endings on gradlew (committed on Windows with CRLF) + make executable
-      - name: Fix gradlew line endings and make executable
-        run: |
-          sed -i 's/\r//' gradlew
-          chmod +x gradlew
-          echo "gradlew is ready"
-
-      # 6. Build Debug APK
+      # 5. Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
