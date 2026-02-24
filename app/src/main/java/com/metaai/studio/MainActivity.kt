@@ -8,19 +8,41 @@ import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Environment
+import android.util.Base64
 import android.view.KeyEvent
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.webkit.*
+import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
-import android.util.Base64
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var progressBar: ProgressBar
+    private lateinit var noInternetView: LinearLayout
+    private lateinit var retryButton: Button
+    
     private lateinit var searchContainer: LinearLayout
     private lateinit var searchEditText: EditText
     private lateinit var closeSearchButton: Button
@@ -54,6 +76,26 @@ class MainActivity : AppCompatActivity() {
             "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/120.0.6099.230 Mobile Safari/537.36"
+
+        fun getBlobAsBase64Js(url: String): String {
+            return "javascript:(function() {" +
+                    "  var xhr = new XMLHttpRequest();" +
+                    "  xhr.open('GET', '$url', true);" +
+                    "  xhr.responseType = 'blob';" +
+                    "  xhr.onload = function() {" +
+                    "    if (this.status == 200) {" +
+                    "      var blob = this.response;" +
+                    "      var reader = new FileReader();" +
+                    "      reader.readAsDataURL(blob);" +
+                    "      reader.onloadend = function() {" +
+                    "        var base64data = reader.result.split(',')[1];" +
+                    "        BlobDownloader.onBlobDataReceived(base64data, blob.type);" +
+                    "      };" +
+                    "    }" +
+                    "  };" +
+                    "  xhr.send();" +
+                    "})();"
+        }
     }
 
     // ─────────────────────────────────────────────────────────
@@ -434,7 +476,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleDownload(url: String, contentDisposition: String, mimeType: String) {
         // Fix 2: Handle blob: and data: URLs
         if (url.startsWith("blob:")) {
-            webView.loadUrl(BlobDownloader.getBlobAsBase64Js(url))
+            webView.loadUrl(getBlobAsBase64Js(url))
             return
         }
 
@@ -608,28 +650,6 @@ class MainActivity : AppCompatActivity() {
             val fileName = "MetaAI_Blob_${System.currentTimeMillis()}.$ext"
             runOnUiThread {
                 saveBytesToFile(bytes, fileName, mimeType)
-            }
-        }
-
-        companion object {
-            fun getBlobAsBase64Js(url: String): String {
-                return "javascript:(function() {" +
-                        "  var xhr = new XMLHttpRequest();" +
-                        "  xhr.open('GET', '$url', true);" +
-                        "  xhr.responseType = 'blob';" +
-                        "  xhr.onload = function() {" +
-                        "    if (this.status == 200) {" +
-                        "      var blob = this.response;" +
-                        "      var reader = new FileReader();" +
-                        "      reader.readAsDataURL(blob);" +
-                        "      reader.onloadend = function() {" +
-                        "        var base64data = reader.result.split(',')[1];" +
-                        "        BlobDownloader.onBlobDataReceived(base64data, blob.type);" +
-                        "      };" +
-                        "    }" +
-                        "  };" +
-                        "  xhr.send();" +
-                        "})();"
             }
         }
     }
