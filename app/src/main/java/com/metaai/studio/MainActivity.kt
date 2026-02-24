@@ -249,10 +249,9 @@ class MainActivity : AppCompatActivity() {
         ): Boolean {
             val url  = request.url?.toString() ?: return false
             val host = request.url?.host      ?: return false
-            val path = request.url?.path      ?: ""
 
-            // Handle special intent:// and deep link schemes
-            if (url.startsWith("intent://") || url.startsWith("fb-messenger://") || url.startsWith("fb://")) {
+            // 1. Handle special Intent URIs (intent://)
+            if (url.startsWith("intent://")) {
                 return try {
                     val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
                     if (packageManager.resolveActivity(intent, 0) != null) {
@@ -262,20 +261,28 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) { true }
             }
 
-            // Always allow standard web protocols
-            if (!url.startsWith("https://") && !url.startsWith("http://")) return true
+            // 2. Handle direct app schemes (fb://, fb-messenger://, mailto:, etc.)
+            if (!url.startsWith("http")) {
+                return try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    if (packageManager.resolveActivity(intent, 0) != null) {
+                        startActivity(intent)
+                    }
+                    true
+                } catch (e: Exception) { true }
+            }
 
-            // Logic to keep login and app functionality INSIDE the WebView
+            // 3. Logic to keep login and app functionality INSIDE the WebView
             val isWhitelisted = ALLOWED_HOSTS.any { host.endsWith(it, ignoreCase = true) }
-            val isLoginFlow = url.contains("login") || url.contains("auth") || url.contains("oauth") || url.contains("account")
+            val loginKeywords = listOf("login", "auth", "oauth", "account", "checkpoint", "reg", "confirm")
+            val isLoginFlow = loginKeywords.any { url.contains(it, ignoreCase = true) }
 
             return if (isWhitelisted || isLoginFlow) {
-                false // Keep inside the app
+                false // Keep inside the app (WebView)
             } else {
-                // Truly external URLs (like privacy policy links to other sites) open in external browser
+                // Truly external URLs (privacy policies, external links) open in device browser
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    startActivity(intent)
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 } catch (e: ActivityNotFoundException) {
                     Toast.makeText(this@MainActivity, "No browser found", Toast.LENGTH_SHORT).show()
                 }
