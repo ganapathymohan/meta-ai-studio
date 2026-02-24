@@ -276,7 +276,7 @@ class MainActivity : AppCompatActivity() {
         // Long-click for Video Download (Fix 3 continued)
         webView.setOnLongClickListener {
             val result = webView.hitTestResult
-            if (result.type == WebView.HitTestResult.VIDEO_TYPE || result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) {
+            if (result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE || result.type == WebView.HitTestResult.IMAGE_ANCHOR_TYPE) {
                 val url = result.extra
                 if (url != null && (url.contains(".mp4") || url.contains(".mkv") || url.contains(".webm"))) {
                     AlertDialog.Builder(this)
